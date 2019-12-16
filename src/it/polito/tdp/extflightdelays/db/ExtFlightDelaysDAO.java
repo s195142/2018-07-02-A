@@ -7,10 +7,12 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import it.polito.tdp.extflightdelays.model.Airline;
 import it.polito.tdp.extflightdelays.model.Airport;
 import it.polito.tdp.extflightdelays.model.Flight;
+import it.polito.tdp.extflightdelays.model.Rotta;
 
 public class ExtFlightDelaysDAO {
 
@@ -37,7 +39,7 @@ public class ExtFlightDelaysDAO {
 		}
 	}
 
-	public List<Airport> loadAllAirports() {
+	public List<Airport> loadAllAirports(Map<Integer, Airport> aidmap) {
 		String sql = "SELECT * FROM airports";
 		List<Airport> result = new ArrayList<Airport>();
 
@@ -47,10 +49,16 @@ public class ExtFlightDelaysDAO {
 			ResultSet rs = st.executeQuery();
 
 			while (rs.next()) {
-				Airport airport = new Airport(rs.getInt("ID"), rs.getString("IATA_CODE"), rs.getString("AIRPORT"),
-						rs.getString("CITY"), rs.getString("STATE"), rs.getString("COUNTRY"), rs.getDouble("LATITUDE"),
-						rs.getDouble("LONGITUDE"), rs.getDouble("TIMEZONE_OFFSET"));
-				result.add(airport);
+				if(!aidmap.containsKey(rs.getInt("ID"))) {
+					Airport airport = new Airport(rs.getInt("ID"), rs.getString("IATA_CODE"), rs.getString("AIRPORT"),
+							rs.getString("CITY"), rs.getString("STATE"), rs.getString("COUNTRY"), rs.getDouble("LATITUDE"),
+							rs.getDouble("LONGITUDE"), rs.getDouble("TIMEZONE_OFFSET"));
+					aidmap.put(rs.getInt("ID"), airport);
+					result.add(airport);
+				}else {
+					result.add(aidmap.get(rs.getInt("ID")));
+				}
+				
 			}
 
 			conn.close();
@@ -91,4 +99,41 @@ public class ExtFlightDelaysDAO {
 			throw new RuntimeException("Error Connection Database");
 		}
 	}
+	
+	public List<Rotta> getRotte(Map<Integer, Airport> aidmap, String distanza){
+		String sql = "SELECT f.ORIGIN_AIRPORT_ID AS o, f.DESTINATION_AIRPORT_ID AS d, AVG(f.DISTANCE) AS peso " + 
+				"FROM flights AS f " + 
+				"GROUP BY o, d " + 
+				"HAVING AVG(f.DISTANCE) >= ? ";
+		
+		List<Rotta> result = new ArrayList<Rotta>();
+
+		try {
+			Connection conn = ConnectDB.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, Integer.parseInt(distanza));
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				Airport orig = aidmap.get(rs.getInt("o"));
+				Airport dest = aidmap.get(rs.getInt("d"));
+				
+				if(orig!=null && dest!=null) {
+					Rotta r = new Rotta(orig, dest, rs.getInt("peso"));
+					result.add(r);		
+				}
+			}
+
+			conn.close();
+			return result;
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+	
+	
+	
 }

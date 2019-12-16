@@ -9,9 +9,11 @@ package it.polito.tdp.extflightdelays;
 import java.net.URL;
 import java.util.ResourceBundle;
 
+import it.polito.tdp.extflightdelays.model.Airport;
 import it.polito.tdp.extflightdelays.model.Model;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextArea;
@@ -37,7 +39,7 @@ public class ExtFlightDelaysController {
     private Button btnAnalizza; // Value injected by FXMLLoader
 
     @FXML // fx:id="cmbBoxAeroportoPartenza"
-    private ComboBox<?> cmbBoxAeroportoPartenza; // Value injected by FXMLLoader
+    private ComboBox<Airport> cmbBoxAeroportoPartenza; // Value injected by FXMLLoader
 
     @FXML // fx:id="btnAeroportiConnessi"
     private Button btnAeroportiConnessi; // Value injected by FXMLLoader
@@ -50,12 +52,23 @@ public class ExtFlightDelaysController {
 
     @FXML
     void doAnalizzaAeroporti(ActionEvent event) {
-
+    	String distanza = distanzaMinima.getText();
+    	if(distanza!=null && !distanza.isEmpty()) {
+    		if(model.isDigit(distanza)) {
+    			model.creaGrafo(distanza);
+    			cmbBoxAeroportoPartenza.getItems().addAll(model.getVertici());
+    		}else{
+        		showMessage("Distanza non valida");
+    		}
+    	}else {
+    		showMessage("Inserire una distanza");
+    	}
     }
 
     @FXML
     void doCalcolaAeroportiConnessi(ActionEvent event) {
-
+    	Airport a = cmbBoxAeroportoPartenza.getValue();
+    	txtResult.setText(model.getConnessi(a));
     }
 
     @FXML
@@ -79,5 +92,12 @@ public class ExtFlightDelaysController {
 		this.model = model;
 		
 	}
+    
+	private void showMessage(String message) {
+		Alert alert = new Alert(Alert.AlertType.ERROR);
+		alert.setContentText(message);
+		alert.show();
+	}
+    
 }
 
